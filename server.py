@@ -74,7 +74,7 @@ session_lock = threading.Lock()   # guards session.running / session.process
 # Bot output parsing
 # ---------------------------------------------------------------------------
 
-TRANSCRIPT_RE = re.compile(r"\[(\d{2}:\d{2}:\d{2})\]\s+\((\w+)\)\s+(.*)")
+TRANSCRIPT_RE = re.compile(r"\[(\d{2}:\d{2}:\d{2})\]\s+\((\w+)\)\s+(?:\[([^\]]+)\]\s+)?(.*)")
 
 
 def _read_bot_output(proc: subprocess.Popen):
@@ -85,7 +85,12 @@ def _read_bot_output(proc: subprocess.Popen):
 
         m = TRANSCRIPT_RE.match(line)
         if m:
-            entry = {"time": m.group(1), "lang": m.group(2), "text": m.group(3)}
+            entry = {
+                "time": m.group(1),
+                "lang": m.group(2),
+                "speaker": m.group(3) or "",
+                "text": m.group(4),
+            }
             with session_lock:
                 session.entries.append(entry)
             session.push("transcript", entry)
