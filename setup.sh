@@ -26,6 +26,9 @@ pip install \
     mlx-whisper \
     sounddevice \
     numpy \
+    torch \
+    torchaudio \
+    silero-vad \
     selenium \
     "undetected-chromedriver>=3.5.0" \
     flask \
