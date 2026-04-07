@@ -177,3 +177,18 @@ PDF export is also available from the web UI.
 ```bash
 python3 -c "import mlx_whisper, numpy as np; mlx_whisper.transcribe(np.zeros(16000, dtype='float32'), path_or_hf_repo='mlx-community/whisper-large-v3-turbo')"
 ```
+
+---
+
+## Contributing
+
+This project is actively evolving. We're looking to add new features and improve the overall experience — contributions, ideas, and feedback are very welcome.
+
+Some directions we're exploring:
+- Speaker diarization (who said what)
+- Automatic meeting summary generation
+- Support for other meeting platforms (Zoom, Teams)
+- Zoom and calendar integrations
+- Improved noise filtering and audio quality
+
+Feel free to open an issue, submit a pull request, or reach out directly if you want to collaborate.
