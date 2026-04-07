@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meet Transcriber</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f17;
+      --surface:   #1a1a2e;
+      --surface2:  #22223b;
+      --border:    #2e2e4a;
+      --accent:    #5b6af0;
+      --accent2:   #7c8cf8;
+      --green:     #34d399;
+      --red:       #f87171;
+      --yellow:    #fbbf24;
+      --text:      #e8e8f0;
+      --muted:     #8888aa;
+      --radius:    12px;
+      --font:      -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      --mono:      "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 340px 1fr;
+      grid-template-areas:
+        "header header"
+        "sidebar main";
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      grid-area: header;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .logo {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 18px;
+    }
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    header .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .status-badge {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+    .status-dot.error { background: var(--red); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────────── */
+    aside {
+      grid-area: sidebar;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    input[type="text"], input[type="url"], select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font);
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 14px;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+
+    .btn {
+      width: 100%;
+      padding: 11px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-danger  { background: #3a1a1a; color: var(--red); border: 1px solid #5a2a2a; }
+    .btn-danger:hover:not(:disabled)  { background: #4a2020; }
+    .btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 13px; }
+    .btn-ghost:hover:not(:disabled)   { border-color: var(--accent); color: var(--accent); }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent2);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 3px;
+    }
+
+    /* Log */
+    #log-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+      height: 120px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    #log-box .log-line { border-bottom: none; }
+
+    /* ── Main area ────────────────────────────────────────────── */
+    main {
+      grid-area: main;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .main-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 16px 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .tab {
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    .tab-panel { display: none; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* Live transcript */
+    #transcript-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .entry {
+      display: grid;
+      grid-template-columns: 72px 36px 1fr;
+      gap: 10px;
+      align-items: baseline;
+      padding: 10px 14px;
+      border-radius: 8px;
+      transition: background 0.15s;
+      animation: fadeIn 0.3s ease;
+    }
+    .entry:hover { background: var(--surface2); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .entry-time {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .entry-lang {
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 2px 5px;
+      text-align: center;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .entry-text {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text);
+    }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 40px; opacity: 0.4; }
+    .empty-state p { font-size: 14px; }
+
+    /* Report panel */
+    #report-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .report-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .report-header h2 { font-size: 20px; font-weight: 700; }
+    .report-header .report-date { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .download-btns { display: flex; gap: 10px; }
+    .download-btns .btn { width: auto; padding: 10px 18px; font-size: 13px; }
+
+    .report-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .report-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+    }
+    .report-stat-value { font-size: 28px; font-weight: 700; color: var(--accent2); }
+    .report-stat-label { font-size: 11px; color: var(--muted); margin-top: 5px; text-transform: uppercase; letter-spacing: 0.6px; }
+
+    .report-transcript {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .report-transcript-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .report-entries { padding: 8px 0; max-height: 480px; overflow-y: auto; }
+    .report-entry {
+      display: grid;
+      grid-template-columns: 72px 36px 1fr;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .report-entry:last-child { border-bottom: none; }
+    .report-entry-time { font-family: var(--mono); color: var(--accent); font-weight: 600; font-size: 11px; padding-top: 2px; }
+    .report-entry-lang { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; padding-top: 2px; }
+    .report-entry-text { line-height: 1.5; }
+
+    .no-report {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .no-report-icon { font-size: 40px; opacity: 0.3; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">🎙</div>
+  <div>
+    <h1>Meet Transcriber</h1>
+    <div class="subtitle">Local · Offline · Apple Silicon</div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Idle</span>
+  </div>
+</header>
+
+<!-- ── Sidebar ────────────────────────────────────────────────── -->
+<aside>
+
+  <!-- Session form -->
+  <div class="card">
+    <div class="card-title">New Session</div>
+    <label>Google Meet URL</label>
+    <input type="url" id="meet-url" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
+    <label>Language</label>
+    <select id="language">
+      <option value="auto">Auto-detect</option>
+      <option value="en">English</option>
+      <option value="fr">French</option>
+      <option value="es">Spanish</option>
+      <option value="de">German</option>
+      <option value="it">Italian</option>
+      <option value="pt">Portuguese</option>
+      <option value="nl">Dutch</option>
+      <option value="ja">Japanese</option>
+      <option value="zh">Chinese</option>
+      <option value="ar">Arabic</option>
+    </select>
+    <button class="btn btn-primary" id="btn-start" onclick="startSession()">
+      <span>▶</span> Start Transcription
+    </button>
+    <button class="btn btn-danger" id="btn-stop" onclick="stopSession()" disabled style="margin-top:8px">
+      <span>■</span> Stop Session
+    </button>
+  </div>
+
+  <!-- Live stats -->
+  <div class="card">
+    <div class="card-title">Live Stats</div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-value" id="stat-segments">0</div>
+        <div class="stat-label">Segments</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-words">0</div>
+        <div class="stat-label">Words</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-duration">00:00</div>
+        <div class="stat-label">Duration</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-lang">—</div>
+        <div class="stat-label">Language</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- System log -->
+  <div class="card" style="flex:1">
+    <div class="card-title">System Log</div>
+    <div id="log-box"></div>
+  </div>
+
+</aside>
+
+<!-- ── Main ───────────────────────────────────────────────────── -->
+<main>
+  <div class="main-tabs">
+    <div class="tab active" onclick="switchTab('live')">Live Transcript</div>
+    <div class="tab" onclick="switchTab('report')">Session Report</div>
+  </div>
+
+  <!-- Live tab -->
+  <div class="tab-panel active" id="tab-live">
+    <div id="transcript-feed">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🎙</div>
+        <p>Start a session to see live transcriptions here.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report tab -->
+  <div class="tab-panel" id="tab-report">
+    <div id="report-panel">
+      <div class="no-report" id="no-report">
+        <div class="no-report-icon">📄</div>
+        <p>The session report will appear here when a session ends.</p>
+      </div>
+      <div id="report-content" style="display:none">
+        <div class="report-header">
+          <div>
+            <h2>Session Report</h2>
+            <div class="report-date" id="report-date"></div>
+          </div>
+          <div class="download-btns">
+            <button class="btn btn-ghost" onclick="download('txt')">⬇ Download .txt</button>
+            <button class="btn btn-primary" onclick="download('pdf')">⬇ Download PDF</button>
+          </div>
+        </div>
+        <div class="report-stats">
+          <div class="report-stat">
+            <div class="report-stat-value" id="r-duration">—</div>
+            <div class="report-stat-label">Duration</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-value" id="r-segments">—</div>
+            <div class="report-stat-label">Segments</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-value" id="r-words">—</div>
+            <div class="report-stat-label">Words</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-value" id="r-langs">—</div>
+            <div class="report-stat-label">Languages</div>
+          </div>
+        </div>
+        <div class="report-transcript">
+          <div class="report-transcript-header">Full Transcript</div>
+          <div class="report-entries" id="report-entries"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────
+  let evtSource = null;
+  let sessionRunning = false;
+  let segments = 0;
+  let wordCount = 0;
+  let startTime = null;
+  let durationTimer = null;
+  let allEntries = [];
+  // Track which event log positions we've already rendered (dedup on reconnect)
+  let seenTranscripts = new Set();
+  let seenLogs = new Set();
+
+  // ── SSE connection ─────────────────────────────────────────────
+  function connectSSE() {
+    if (evtSource) { evtSource.close(); evtSource = null; }
+    evtSource = new EventSource('/api/stream');
+
+    evtSource.addEventListener('started', e => {
+      const d = JSON.parse(e.data);
+      // Avoid double-processing on reconnect replay
+      if (sessionRunning) return;
+      sessionRunning = true;
+      startTime = Date.now();
+      setStatus('live', 'Recording…');
+      setBtns(true);
+      hideEmptyState();
+      startDurationTimer();
+      appendLog(`▶ Session started · ${d.meet_url} · lang: ${d.language}`);
+    });
+
+    evtSource.addEventListener('transcript', e => {
+      const entry = JSON.parse(e.data);
+      const key = entry.time + entry.text;
+      if (seenTranscripts.has(key)) return;   // skip replayed duplicates
+      seenTranscripts.add(key);
+      allEntries.push(entry);
+      appendEntry(entry);
+      segments++;
+      wordCount += entry.text.trim().split(/\s+/).filter(Boolean).length;
+      updateStats(entry.lang);
+    });
+
+    evtSource.addEventListener('log', e => {
+      const d = JSON.parse(e.data);
+      if (!d.message) return;
+      if (seenLogs.has(d.message)) return;
+      seenLogs.add(d.message);
+      // Surface errors prominently
+      const isError = d.message.toLowerCase().includes('error') ||
+                      d.message.toLowerCase().includes('traceback') ||
+                      d.message.toLowerCase().includes('not found');
+      appendLog(d.message, isError);
+    });
+
+    evtSource.addEventListener('done', e => {
+      const d = JSON.parse(e.data);
+      sessionRunning = false;
+      clearInterval(durationTimer);
+      setStatus('', 'Session ended');
+      setBtns(false);
+      appendLog(`■ Session ended · ${d.segments} segments · ${d.words} words`);
+      buildReport(d);
+      switchTab('report');
+    });
+
+    evtSource.onerror = () => {
+      // Browser auto-reconnects; just update status
+      if (!sessionRunning) setStatus('', 'Idle');
+      else setStatus('live', 'Reconnecting…');
+    };
+  }
+
+  // ── Actions ────────────────────────────────────────────────────
+  async function startSession() {
+    const url = document.getElementById('meet-url').value.trim();
+    const lang = document.getElementById('language').value;
+    if (!url) { alert('Please enter a Google Meet URL.'); return; }
+
+    // Reset UI & dedup trackers
+    allEntries = []; segments = 0; wordCount = 0;
+    seenTranscripts = new Set(); seenLogs = new Set();
+    document.getElementById('transcript-feed').innerHTML =
+      '<div class="empty-state" id="empty-state"><div class="empty-icon">🎙</div><p>Waiting for audio…</p></div>';
+    document.getElementById('report-content').style.display = 'none';
+    document.getElementById('no-report').style.display = 'flex';
+    document.getElementById('log-box').innerHTML = '';
+    document.getElementById('stat-segments').textContent = '0';
+    document.getElementById('stat-words').textContent = '0';
+    document.getElementById('stat-duration').textContent = '00:00';
+    document.getElementById('stat-lang').textContent = '—';
+
+    // Preflight check — catch setup issues before launching Chrome
+    appendLog('⏳ Checking system requirements…');
+    const pf = await fetch('/api/preflight').then(r => r.json());
+    if (!pf.ok) {
+      for (const issue of pf.issues) {
+        appendLog('✗ ' + issue.message, true);
+        if (issue.detail) issue.detail.split('\n').forEach(l => appendLog('  ' + l, true));
+        if (issue.available_devices) {
+          appendLog('  Available audio devices:', false);
+          issue.available_devices.forEach(d => appendLog('  · ' + d, false));
+        }
+      }
+      setStatus('error', 'Setup required');
+      return;
+    }
+    appendLog('✓ System check passed');
+
+    const res = await fetch('/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meet_url: url, language: lang }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      appendLog('✗ ' + (data.error || 'Failed to start session'), true);
+      return;
+    }
+  }
+
+  async function stopSession() {
+    document.getElementById('btn-stop').disabled = true;
+    appendLog('⏹ Stop requested — saving transcript…');
+    const res = await fetch('/api/stop', { method: 'POST' });
+    if (!res.ok) {
+      const d = await res.json();
+      appendLog('✗ ' + (d.error || 'Stop failed'), true);
+      document.getElementById('btn-stop').disabled = false;
+    }
+  }
+
+  function download(fmt) {
+    window.location.href = `/api/download/${fmt}`;
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────
+  function setBtns(running) {
+    document.getElementById('btn-start').disabled = running;
+    document.getElementById('btn-stop').disabled = !running;
+  }
+
+  function hideEmptyState() {
+    const el = document.getElementById('empty-state');
+    if (el) el.style.display = 'none';
+  }
+
+  function appendEntry(entry) {
+    hideEmptyState();
+    const feed = document.getElementById('transcript-feed');
+    const div = document.createElement('div');
+    div.className = 'entry';
+    div.innerHTML = `
+      <span class="entry-time">${entry.time}</span>
+      <span class="entry-lang">${entry.lang}</span>
+      <span class="entry-text">${escHtml(entry.text)}</span>
+    `;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function appendLog(msg, isError = false) {
+    const box = document.getElementById('log-box');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.style.color = isError ? 'var(--red)' : '';
+    line.textContent = msg;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function setStatus(cls, text) {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (cls ? ' ' + cls : '');
+    document.getElementById('status-text').textContent = text;
+  }
+
+  function updateStats(lang) {
+    document.getElementById('stat-segments').textContent = segments;
+    document.getElementById('stat-words').textContent = wordCount;
+    if (lang) document.getElementById('stat-lang').textContent = lang.toUpperCase();
+  }
+
+  function startDurationTimer() {
+    clearInterval(durationTimer);
+    durationTimer = setInterval(() => {
+      if (!startTime) return;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      const s = (elapsed % 60).toString().padStart(2, '0');
+      document.getElementById('stat-duration').textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['live', 'report'][i] === name);
+    });
+    document.getElementById('tab-live').classList.toggle('active', name === 'live');
+    document.getElementById('tab-report').classList.toggle('active', name === 'report');
+  }
+
+  function buildReport(stats) {
+    document.getElementById('no-report').style.display = 'none';
+    document.getElementById('report-content').style.display = 'block';
+    document.getElementById('report-date').textContent = new Date().toLocaleString();
+    document.getElementById('r-duration').textContent = stats.duration;
+    document.getElementById('r-segments').textContent = stats.segments;
+    document.getElementById('r-words').textContent    = stats.words;
+    document.getElementById('r-langs').textContent    = (stats.languages || []).join(', ').toUpperCase() || '—';
+
+    const container = document.getElementById('report-entries');
+    container.innerHTML = '';
+    allEntries.forEach(e => {
+      const div = document.createElement('div');
+      div.className = 'report-entry';
+      div.innerHTML = `
+        <span class="report-entry-time">${e.time}</span>
+        <span class="report-entry-lang">${e.lang}</span>
+        <span class="report-entry-text">${escHtml(e.text)}</span>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────
+  // Poll /api/status once on load to restore running state if server restarted mid-session
+  fetch('/api/status').then(r => r.json()).then(s => {
+    if (s.running) {
+      sessionRunning = true;
+      startTime = s.start_time ? new Date(s.start_time).getTime() : Date.now();
+      setStatus('live', 'Recording…');
+      setBtns(true);
+      startDurationTimer();
+    }
+  }).catch(() => {});
+
+  connectSSE();
+</script>
+</body>
+</html>
