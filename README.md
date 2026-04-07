@@ -1,4 +1,4 @@
-# Le Scribe
+# Le Scribe 📜
 
 A fully local Google Meet transcription bot for macOS (Apple Silicon).
 
