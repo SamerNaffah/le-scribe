@@ -5,6 +5,7 @@ A fully local Google Meet transcription bot for macOS (Apple Silicon).
 - Joins Google Meet as a guest bot — no Google account required
 - Captures audio from both remote participants (via BlackHole) and your own mic
 - Transcribes in real-time with **mlx-whisper** — fully on-device, no cloud API
+- **Speaker diarization** — knows who said what (SPEAKER_00, SPEAKER_01, ...)
 - Live transcript visible in a web UI at `http://localhost:5050`
 - Saves full session transcript as `.txt`, `.json`, and `.pdf`
 
@@ -19,6 +20,7 @@ A fully local Google Meet transcription bot for macOS (Apple Silicon).
 | Homebrew | https://brew.sh |
 | Google Chrome | Must be installed |
 | BlackHole 2ch | Virtual audio loopback — `brew install blackhole-2ch` |
+| HuggingFace account | Free — required for speaker diarization model |
 
 ---
 
@@ -30,6 +32,19 @@ A fully local Google Meet transcription bot for macOS (Apple Silicon).
 cd meet-transcriber
 bash setup.sh
 ```
+
+### 2. Set up speaker diarization (HuggingFace)
+
+Speaker diarization uses pyannote.audio, which requires accepting model terms:
+
+1. Create a free account at https://huggingface.co
+2. Accept terms at https://huggingface.co/pyannote/speaker-diarization-3.1
+3. Accept terms at https://huggingface.co/pyannote/segmentation-3.0
+4. Generate a token at https://huggingface.co/settings/tokens (read access)
+5. Add your token to `transcriber.py`:
+   ```python
+   _HF_TOKEN = "your_token_here"
+   ```
 
 ### 2. Install BlackHole
 
@@ -109,10 +124,11 @@ python bot.py --meet https://meet.google.com/xxx-xxxx-xxx --lang auto
 4. Audio capture starts — two streams are mixed:
    - **BlackHole**: captures audio from other participants (played by the bot's Chrome)
    - **Mic**: captures your own voice (never echoed back by Meet)
-5. Every 10 seconds of audio is transcribed by Whisper and shown in the UI:
+5. VAD (Silero) detects when someone finishes speaking and triggers transcription
+6. Pyannote diarizes the chunk (who spoke), Whisper transcribes it (what was said):
    ```
-   [00:00:10] (fr) Bonjour tout le monde, bienvenue à cette réunion.
-   [00:00:20] (en) Let's start with the agenda for today.
+   [00:00:08] (fr) [SPEAKER_00] Bonjour tout le monde, bienvenue à cette réunion.
+   [00:00:15] (en) [SPEAKER_01] Let's start with the agenda for today.
    ```
 6. Stop the session — transcript is saved automatically
 

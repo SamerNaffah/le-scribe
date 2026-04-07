@@ -43,15 +43,17 @@ def format_elapsed(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def add_entry(elapsed: float, lang: str, text: str):
+def add_entry(elapsed: float, lang: str, text: str, speaker: str = ""):
     entry = {
         "time": format_elapsed(elapsed),
         "lang": lang,
         "text": text,
+        "speaker": speaker,
     }
     with transcript_lock:
         transcript_entries.append(entry)
-    print(f"[{entry['time']}] ({lang}) {text}")
+    speaker_tag = "[" + speaker + "] " if speaker else ""
+    print("[" + entry["time"] + "] (" + lang + ") " + speaker_tag + text)
 
 
 def save_transcript():
@@ -68,10 +70,11 @@ def save_transcript():
     # Plain text
     txt_path = base.with_suffix(".txt")
     with open(txt_path, "w", encoding="utf-8") as f:
-        f.write(f"Google Meet Transcript — {session_start.strftime('%Y-%m-%d %H:%M')}\n")
+        f.write("Google Meet Transcript — " + session_start.strftime("%Y-%m-%d %H:%M") + "\n")
         f.write("=" * 60 + "\n\n")
         for e in entries:
-            f.write(f"[{e['time']}] ({e['lang']}) {e['text']}\n")
+            speaker_tag = "[" + e["speaker"] + "] " if e.get("speaker") else ""
+            f.write("[" + e["time"] + "] (" + e["lang"] + ") " + speaker_tag + e["text"] + "\n")
 
     # JSON
     json_path = base.with_suffix(".json")
@@ -360,14 +363,12 @@ def transcription_worker(device_index: int, chunk_seconds: int, silence_threshol
             silence_threshold=silence_threshold,
         ):
             try:
-                result = transcribe_chunk(audio_chunk, language=language)
-                text = result["text"]
-                detected_lang = result["language"]
-
-                if text:
-                    add_entry(elapsed, detected_lang, text)
+                results = transcribe_chunk(audio_chunk, language=language)
+                for r in results:
+                    if r.get("text"):
+                        add_entry(elapsed, r["language"], r["text"], speaker=r.get("speaker", ""))
             except Exception as e:
-                print(f"[transcriber] Error transcribing chunk: {e}")
+                print("[transcriber] Error transcribing chunk: " + str(e))
     except Exception as e:
         print(f"[audio] Stream error: {e}")
 

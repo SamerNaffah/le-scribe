@@ -271,6 +271,25 @@
       font-weight: 600;
       text-transform: uppercase;
     }
+    .entry-speaker {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(91,106,240,0.12);
+      border-radius: 4px;
+      padding: 1px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .report-entry-speaker {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-top: 2px;
+    }
     .entry-text {
       font-size: 14px;
       line-height: 1.55;
@@ -659,9 +678,13 @@
     const feed = document.getElementById('transcript-feed');
     const div = document.createElement('div');
     div.className = 'entry';
+    const speakerHtml = entry.speaker
+      ? `<span class="entry-speaker">${escHtml(entry.speaker)}</span>`
+      : '';
     div.innerHTML = `
       <span class="entry-time">${entry.time}</span>
       <span class="entry-lang">${entry.lang}</span>
+      ${speakerHtml}
       <span class="entry-text">${escHtml(entry.text)}</span>
     `;
     feed.appendChild(div);
@@ -723,9 +746,13 @@
     allEntries.forEach(e => {
       const div = document.createElement('div');
       div.className = 'report-entry';
+      const speakerHtml = e.speaker
+        ? `<span class="report-entry-speaker">${escHtml(e.speaker)}</span>`
+        : '';
       div.innerHTML = `
         <span class="report-entry-time">${e.time}</span>
         <span class="report-entry-lang">${e.lang}</span>
+        ${speakerHtml}
         <span class="report-entry-text">${escHtml(e.text)}</span>
       `;
       container.appendChild(div);
