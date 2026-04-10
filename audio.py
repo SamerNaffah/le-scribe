@@ -11,7 +11,6 @@ when someone finishes speaking — no fixed timer, no mid-sentence cuts.
 
 import time
 import queue
-import threading
 import numpy as np
 import sounddevice as sd
 import torch
@@ -137,9 +136,6 @@ def stream_chunks(
     min_frames = int(MIN_SPEECH_SECONDS * sample_rate)
     max_frames = int(MAX_CHUNK_SECONDS * sample_rate)
     pad_frames = int(SILENCE_PAD_SECONDS * sample_rate)
-
-    # Track where last yield ended to avoid reprocessing
-    last_yield_end = 0  # in frames within mixed_buf (we trim periodically)
 
     print("[audio] Stream started. Listening for speech...")
 
