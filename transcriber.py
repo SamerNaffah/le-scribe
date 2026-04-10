@@ -27,6 +27,7 @@ _SAMPLE_RATE = 16000
 
 _whisper = None          # mlx_whisper module, loaded once
 _diarizer = None         # pyannote Pipeline, loaded once
+_embedding_model = None  # pyannote Inference, loaded once
 
 # Speaker identity tracking across chunks
 # Maps pyannote's per-chunk label → global session label
@@ -54,7 +55,7 @@ def get_speaker_names() -> dict[str, str]:
 
 def preload_model():
     """Load Whisper + pyannote once. Call after admission to warm up."""
-    global _whisper, _diarizer
+    global _whisper, _diarizer, _embedding_model
 
     if _whisper is None:
         import mlx_whisper
@@ -71,8 +72,9 @@ def preload_model():
         print("[transcriber] Loading diarization model...")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            from pyannote.audio import Pipeline
+            from pyannote.audio import Pipeline, Inference
             _diarizer = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
+            _embedding_model = Inference("pyannote/embedding", window="whole")
         print("[transcriber] Diarization model ready.")
 
     return _whisper, _diarizer
@@ -144,8 +146,6 @@ def transcribe_chunk(audio_np: np.ndarray, language: str = None) -> list[dict]:
 
         # Get speaker embeddings for identity tracking
         try:
-            from pyannote.audio import Inference
-            embedding_model = Inference("pyannote/embedding", window="whole")
             local_to_global = {}
             for _, _, local_label in segments:
                 if local_label not in local_to_global:
@@ -158,7 +158,7 @@ def transcribe_chunk(audio_np: np.ndarray, language: str = None) -> list[dict]:
                             speaker_audio = np.concatenate([speaker_audio, audio_np[s:e]])
                     if len(speaker_audio) > 0:
                         wf = torch.from_numpy(speaker_audio).unsqueeze(0)
-                        emb = embedding_model({"waveform": wf, "sample_rate": _SAMPLE_RATE})
+                        emb = _embedding_model({"waveform": wf, "sample_rate": _SAMPLE_RATE})
                         local_to_global[local_label] = _resolve_speaker(local_label, np.array(emb))
                     else:
                         local_to_global[local_label] = local_label
